@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const PAGE = String.raw`<!doctype html>
+export const PAGE = String.raw`<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -54,9 +54,17 @@ const PAGE = String.raw`<!doctype html>
     .flags { display:flex; flex-wrap:wrap; gap:7px; margin:16px 0; }
     .flag { padding:5px 8px; border-radius:7px; background:#351d1d; color:#ffb1b1; font-size:.78rem; }
     .cta { display:inline-flex; margin-top:8px; padding:10px 13px; border:1px solid var(--line); border-radius:9px; text-decoration:none; font-weight:800; }
+    .paid-audit { display:grid; grid-template-columns:1fr auto; align-items:center; gap:24px; margin-top:18px; padding:22px; border:1px solid #5f512b; border-radius:14px; background:linear-gradient(135deg,#211d0f,#0c1913 62%); }
+    .paid-audit h3 { margin:3px 0 7px; font:800 1.15rem ui-sans-serif,system-ui,sans-serif; }
+    .paid-audit p { margin:0; max-width:690px; }
+    .paid-audit .delivery { margin-top:8px; color:var(--gold); font-size:.82rem; }
+    .audit-action { display:grid; justify-items:end; gap:7px; min-width:210px; }
+    .audit-price { color:var(--gold); font:800 1.25rem ui-sans-serif,system-ui,sans-serif; }
+    .audit-cta { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:9px; background:var(--gold); color:#171205; text-decoration:none; font-weight:900; text-align:center; }
+    .audit-note { color:var(--muted); font-size:.7rem; text-align:right; }
     ul { color:var(--muted); padding-left:20px; }
     footer { display:flex; justify-content:space-between; gap:20px; margin-top:40px; color:var(--muted); font-size:.8rem; }
-    @media (max-width:720px) { nav { margin-bottom:48px; } .proof,.metrics { grid-template-columns:1fr 1fr; } form { grid-template-columns:1fr; } button { width:100%; } }
+    @media (max-width:720px) { nav { margin-bottom:48px; } .proof,.metrics { grid-template-columns:1fr 1fr; } form { grid-template-columns:1fr; } button { width:100%; } .paid-audit { grid-template-columns:1fr; } .audit-action { justify-items:start; min-width:0; } .audit-note { text-align:left; } }
     @media (max-width:440px) { .proof,.metrics { grid-template-columns:1fr; } footer { flex-direction:column; } }
   </style>
 </head>
@@ -90,13 +98,28 @@ const PAGE = String.raw`<!doctype html>
         <ul id="rationale"></ul>
         <a class="cta" id="issue-link" href="https://github.com/" target="_blank" rel="noopener noreferrer">Open issue on GitHub ↗</a>
       </article>
+      <aside class="paid-audit" aria-labelledby="paid-audit-heading">
+        <div>
+          <div class="eyebrow">Need a decision you can act on?</div>
+          <h3 id="paid-audit-heading">Get a reviewed bounty viability audit</h3>
+          <p>Payment evidence, active competitors and pull requests, scope risk, stack fit, expected value, and a clear pursue / inspect / skip recommendation.</p>
+          <p class="delivery">Concise evidence report delivered within 4 hours.</p>
+        </div>
+        <div class="audit-action">
+          <div class="audit-price">10 USDT</div>
+          <a class="audit-cta" id="audit-link" href="mailto:eu@resolvicomai.app?subject=BountyProof%20paid%20audit%20request">Request paid audit</a>
+          <span class="audit-note">No payment details needed to request.</span>
+        </div>
+      </aside>
     </section>
     <footer><span>Deterministic scoring. No selection or payment guarantees.</span><span><a href="/api/openapi">OpenAPI</a> · <a href="/api/health">Status</a></span></footer>
   </main>
   <script nonce="__NONCE__">
-    const form=document.querySelector('#verify-form'),input=document.querySelector('#issue-url'),languages=document.querySelector('#languages'),submit=document.querySelector('#submit'),status=document.querySelector('#status'),result=document.querySelector('#result');
+    const form=document.querySelector('#verify-form'),input=document.querySelector('#issue-url'),languages=document.querySelector('#languages'),submit=document.querySelector('#submit'),status=document.querySelector('#status'),result=document.querySelector('#result'),auditLink=document.querySelector('#audit-link');
     const set=(id,value)=>{document.querySelector(id).textContent=String(value)};
     const metric=(label,value)=>{const box=document.createElement('div');box.className='metric';const l=document.createElement('span'),v=document.createElement('strong');l.textContent=label;v.textContent=value;box.append(l,v);return box};
+    const updateAuditLink=()=>{const body='GitHub issue: '+(input.value||'[paste issue URL]')+'\nStack: '+(languages.value||'[optional]')+'\n\nPlease send the BountyProof audit details.';auditLink.href='mailto:eu@resolvicomai.app?subject='+encodeURIComponent('BountyProof paid audit request')+'&body='+encodeURIComponent(body)};
+    input.addEventListener('input',updateAuditLink);languages.addEventListener('input',updateAuditLink);updateAuditLink();
     form.addEventListener('submit',async event=>{
       event.preventDefault(); submit.disabled=true; result.hidden=true; status.textContent='Checking payment evidence, competition and repository activity…';
       try {

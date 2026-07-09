@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "verify:live": "vite-node scripts/verify-live.ts",
     "serve:local": "vite-node scripts/server.ts",
-    "dev": "vercel dev"
+    "dev": "vite-node scripts/server.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

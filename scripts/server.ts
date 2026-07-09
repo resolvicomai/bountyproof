@@ -1,5 +1,7 @@
+import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
+import { PAGE } from "../api/index.js";
 import { GitHubApiError } from "../src/github.js";
 import { openApiDocument, serviceMetadata } from "../src/metadata.js";
 import { scan, validateRequest } from "../src/service.js";
@@ -19,6 +21,18 @@ function send(response: ServerResponse, status: number, payload: unknown) {
   response.end(JSON.stringify(payload));
 }
 
+function sendPage(response: ServerResponse) {
+  const nonce = randomBytes(18).toString("base64");
+  response.writeHead(200, {
+    "cache-control": "no-store",
+    "content-security-policy": `default-src 'self'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`,
+    "content-type": "text/html; charset=utf-8",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+  });
+  response.end(PAGE.replaceAll("__NONCE__", nonce));
+}
+
 async function readJson(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -35,6 +49,9 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
 
 const server = createServer(async (request, response) => {
   if (request.method === "OPTIONS") return send(response, 204, null);
+  if (request.method === "GET" && request.url === "/") {
+    return sendPage(response);
+  }
   if (request.method === "GET" && request.url === "/api/health") {
     return send(response, 200, {
       service: "BountyProof",
