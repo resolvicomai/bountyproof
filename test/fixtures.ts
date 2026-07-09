@@ -26,6 +26,7 @@ export function issue(overrides: Partial<GitHubIssue> = {}): GitHubIssue {
     updated_at: "2026-07-09T12:00:00.000Z",
     comments: 0,
     user: { login: "maintainer", type: "User" },
+    assignees: [],
     labels: [{ name: "bounty" }],
     ...overrides,
   };

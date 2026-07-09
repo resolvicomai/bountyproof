@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { extractCompetition, scoreOpportunity } from "../src/scoring.js";
-import type { CompetitionEvidence } from "../src/types.js";
+import type { CompetitionEvidence, GitHubTimelineEvent } from "../src/types.js";
 import { NOW, comment, issue, repository, reward } from "./fixtures.js";
 
 const noCompetition: CompetitionEvidence = {
@@ -19,6 +19,7 @@ function score(
     issue: issue(),
     repository: repository(),
     comments: [comment()],
+    timeline: [],
     reward: reward(),
     competition: noCompetition,
     preferredLanguages: ["TypeScript", "Python", "MCP"],
@@ -111,6 +112,36 @@ describe("scoreOpportunity", () => {
     expect(result.score.total).toBe(0);
     expect(result.flags).toContain("exclusive-assignee");
   });
+
+  it("rejects an issue that already has an assignee", () => {
+    const result = score({
+      issue: issue({ assignees: [{ login: "alice", type: "User" }] }),
+      timeline: [
+        {
+          event: "cross-referenced",
+          actor: { login: "alice", type: "User" },
+          source: {
+            issue: {
+              html_url: "https://github.com/example/paid-project/pull/8",
+              state: "open",
+              user: { login: "alice", type: "User" },
+              pull_request: { merged_at: null },
+            },
+          },
+        },
+      ],
+    });
+    expect(result.score.total).toBe(0);
+    expect(result.flags).toContain("exclusive-assignee");
+  });
+
+  it("does not treat a triage assignee as a competing solver", () => {
+    const result = score({
+      issue: issue({ assignees: [{ login: "maintainer", type: "User" }] }),
+    });
+    expect(result.flags).not.toContain("exclusive-assignee");
+    expect(result.score.total).toBe(97);
+  });
 });
 
 describe("extractCompetition", () => {
@@ -130,6 +161,42 @@ describe("extractCompetition", () => {
       claims: 1,
       linkedPullRequests: 1,
       uniqueCompetitors: 2,
+    });
+  });
+
+  it("finds open pull requests and authors through the issue timeline", () => {
+    const timeline: GitHubTimelineEvent[] = [
+      {
+        event: "cross-referenced",
+        actor: { login: "alice", type: "User" },
+        source: {
+          issue: {
+            html_url: "https://github.com/example/paid-project/pull/8",
+            state: "open",
+            user: { login: "alice", type: "User" },
+            pull_request: { merged_at: null },
+          },
+        },
+      },
+      {
+        event: "cross-referenced",
+        actor: { login: "bob", type: "User" },
+        source: {
+          issue: {
+            html_url: "https://github.com/example/paid-project/pull/9",
+            state: "closed",
+            user: { login: "bob", type: "User" },
+            pull_request: { merged_at: null },
+          },
+        },
+      },
+    ];
+
+    expect(extractCompetition([], timeline)).toEqual({
+      attempts: 0,
+      claims: 0,
+      linkedPullRequests: 1,
+      uniqueCompetitors: 1,
     });
   });
 });

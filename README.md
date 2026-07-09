@@ -2,7 +2,7 @@
 
 Find coding work that is actually worth doing.
 
-BountyProof is a deterministic opportunity-intelligence API for developers and agents. It verifies a GitHub issue, extracts payment evidence only from trusted sources, measures visible competition and existing solutions, detects stale or suspicious listings, and ranks the opportunity by expected value.
+BountyProof is a deterministic opportunity-intelligence API for developers and agents. It verifies a GitHub issue, extracts payment evidence only from trusted sources, measures visible competition and linked solutions through the GitHub timeline, detects assignments plus stale or suspicious listings, and ranks the opportunity by expected value.
 
 The public product is live at [bountyproof.vercel.app](https://bountyproof.vercel.app). Its first version is a free A2MCP-compatible HTTPS endpoint built for the OKX.AI Genesis hackathon. A paid x402 endpoint is planned after the free review path is live.
 

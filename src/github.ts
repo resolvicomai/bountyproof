@@ -2,6 +2,7 @@ import type {
   GitHubComment,
   GitHubIssue,
   GitHubRepository,
+  GitHubTimelineEvent,
 } from "./types.js";
 
 interface SearchResponse {
@@ -90,6 +91,12 @@ export class GitHubClient {
   async getComments(reference: IssueReference): Promise<GitHubComment[]> {
     return this.request<GitHubComment[]>(
       `/repos/${encodeURIComponent(reference.owner)}/${encodeURIComponent(reference.repo)}/issues/${reference.number}/comments?per_page=100&sort=created&direction=asc`,
+    );
+  }
+
+  async getTimeline(reference: IssueReference): Promise<GitHubTimelineEvent[]> {
+    return this.request<GitHubTimelineEvent[]>(
+      `/repos/${encodeURIComponent(reference.owner)}/${encodeURIComponent(reference.repo)}/issues/${reference.number}/timeline?per_page=100`,
     );
   }
 

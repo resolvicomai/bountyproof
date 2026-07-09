@@ -26,17 +26,19 @@ async function evaluate(
   preferredLanguages: string[],
   now: Date,
 ): Promise<Opportunity> {
-  const [repository, comments] = await Promise.all([
+  const [repository, comments, timeline] = await Promise.all([
     client.getRepository(reference.owner, reference.repo),
     client.getComments(reference),
+    client.getTimeline(reference).catch(() => []),
   ]);
   const reward = extractReward(issue, comments);
-  const competition = extractCompetition(comments);
+  const competition = extractCompetition(comments, timeline);
   const scored = scoreOpportunity({
     now,
     issue,
     repository,
     comments,
+    timeline,
     reward,
     competition,
     preferredLanguages,
@@ -50,6 +52,7 @@ async function evaluate(
       title: issue.title,
       url: issue.html_url,
       state: issue.state,
+      assignees: issue.assignees.map((assignee) => assignee.login),
       createdAt: issue.created_at,
       updatedAt: issue.updated_at,
     },

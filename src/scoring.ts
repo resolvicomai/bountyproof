@@ -3,6 +3,7 @@ import type {
   GitHubComment,
   GitHubIssue,
   GitHubRepository,
+  GitHubTimelineEvent,
   OpportunityScore,
   RewardEvidence,
   RiskFlag,
@@ -13,6 +14,7 @@ export interface ScoringInput {
   issue: GitHubIssue;
   repository: GitHubRepository;
   comments: GitHubComment[];
+  timeline: GitHubTimelineEvent[];
   reward: RewardEvidence;
   competition: CompetitionEvidence;
   preferredLanguages: string[];
@@ -161,8 +163,16 @@ function probabilityFrom(
 }
 
 export function scoreOpportunity(input: ScoringInput): ScoringOutput {
-  const { now, issue, repository, comments, reward, competition, preferredLanguages } =
-    input;
+  const {
+    now,
+    issue,
+    repository,
+    comments,
+    timeline,
+    reward,
+    competition,
+    preferredLanguages,
+  } = input;
   const flags: RiskFlag[] = [];
   const rationale: string[] = [];
 
@@ -176,7 +186,22 @@ export function scoreOpportunity(input: ScoringInput): ScoringOutput {
   }
   if (competition.linkedPullRequests > 0) flags.push("existing-solution");
   if (competition.uniqueCompetitors >= 10) flags.push("extreme-competition");
+  const activeCompetitors = new Set([
+    ...comments
+      .filter((comment) =>
+        /\/attempt|\/try\b|\/claim\b|\b(?:PR|pull request)\s*#?\d+|\bproposal\b|i(?:'d| would) like to work|claiming this/i.test(
+          comment.body,
+        ),
+      )
+      .map((comment) => comment.user.login),
+    ...timeline
+      .map((event) => event.source?.issue)
+      .filter((source) => source?.pull_request !== undefined && source.state === "open")
+      .map((source) => source?.user.login)
+      .filter((login): login is string => login !== undefined),
+  ]);
   if (
+    issue.assignees.some((assignee) => activeCompetitors.has(assignee.login)) ||
     comments.some(
       (comment) =>
         ["OWNER", "MEMBER", "COLLABORATOR"].includes(comment.author_association) &&
@@ -272,29 +297,50 @@ export function scoreOpportunity(input: ScoringInput): ScoringOutput {
   };
 }
 
-export function extractCompetition(comments: GitHubComment[]): CompetitionEvidence {
+export function extractCompetition(
+  comments: GitHubComment[],
+  timeline: GitHubTimelineEvent[] = [],
+): CompetitionEvidence {
   const attempts = comments.filter((comment) => /\/attempt|\/try\b/i.test(comment.body));
   const claims = comments.filter((comment) => /\/claim\b/i.test(comment.body));
-  const linkedPullRequests = new Set(
-    comments.flatMap((comment) =>
-      [...comment.body.matchAll(/github\.com\/[\w.-]+\/[\w.-]+\/pull\/(\d+)/gi)].map(
-        (match) => match[0],
-      ),
-    ),
+  const timelinePullRequests = timeline
+    .map((event) => event.source?.issue)
+    .filter(
+      (source): source is NonNullable<typeof source> =>
+        source?.pull_request !== undefined,
+    );
+  const timelineStates = new Map(
+    timelinePullRequests.map((pullRequest) => [pullRequest.html_url, pullRequest.state]),
   );
+  const linkedPullRequests = new Set([
+    ...comments.flatMap((comment) =>
+      [...comment.body.matchAll(/https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/gi)]
+        .map((match) => match[0])
+        .filter((url) => timelineStates.get(url) !== "closed"),
+    ),
+    ...timelinePullRequests
+      .filter((pullRequest) => pullRequest.state === "open")
+      .map((pullRequest) => pullRequest.html_url),
+  ]);
   const competitorComments = comments.filter((comment) =>
     /\/attempt|\/try\b|\/claim\b|\b(?:PR|pull request)\s*#?\d+|\bproposal\b|i(?:'d| would) like to work|claiming this/i.test(
       comment.body,
     ),
   );
+  const competitorUsers = [
+    ...competitorComments.map((comment) => comment.user),
+    ...timelinePullRequests
+      .filter((pullRequest) => pullRequest.state === "open")
+      .map((pullRequest) => pullRequest.user),
+  ];
   const uniqueCompetitors = new Set(
-    competitorComments
+    competitorUsers
       .filter(
-        (comment) =>
-          comment.user.type !== "Bot" &&
-          !/^(?:algora-pbc|bountyhub-app)(?:\[bot\])?$/i.test(comment.user.login),
+        (user) =>
+          user.type !== "Bot" &&
+          !/^(?:algora-pbc|bountyhub-app)(?:\[bot\])?$/i.test(user.login),
       )
-      .map((comment) => comment.user.login)
+      .map((user) => user.login)
       .filter((login) => !/bot$|\[bot\]$/i.test(login)),
   ).size;
 

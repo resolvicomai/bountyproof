@@ -27,6 +27,7 @@ export interface GitHubIssue {
   updated_at: string;
   comments: number;
   user: GitHubUser;
+  assignees: GitHubUser[];
   labels: GitHubLabel[];
   pull_request?: unknown;
 }
@@ -44,6 +45,21 @@ export interface GitHubComment {
     | "MEMBER"
     | "NONE"
     | "OWNER";
+}
+
+export interface GitHubTimelineEvent {
+  event: string;
+  actor: GitHubUser | null;
+  source?: {
+    issue?: {
+      html_url: string;
+      state: "open" | "closed";
+      user: GitHubUser;
+      pull_request?: {
+        merged_at: string | null;
+      };
+    };
+  };
 }
 
 export interface GitHubRepository {
@@ -122,6 +138,7 @@ export interface Opportunity {
     title: string;
     url: string;
     state: "open" | "closed";
+    assignees: string[];
     createdAt: string;
     updatedAt: string;
   };
