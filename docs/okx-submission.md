@@ -33,6 +33,14 @@ Use the free A2MCP endpoint for the Genesis demo and the paid A2A service for th
 
 Re-run both scans immediately before recording because GitHub competition counts and expected value are live evidence and can change.
 
+## Demo artifact
+
+The local, captioned 16:9 demo is generated at `output/bountyproof-okx-demo.mp4`. It is silent, approximately 52 seconds long, and ready for the final X upload. Rebuild it from three fresh browser captures with:
+
+```bash
+./scripts/build-demo.sh <opening-shot> <form-shot> <evidence-shot>
+```
+
 ## Draft X post
 
 > Paid coding boards tell you the reward. They rarely tell you whether the repo is alive, five people already solved it, or payment is credible. I built BountyProof: an agent-callable API that verifies the evidence and estimates value before you code. Built for #OKXAI. [demo]
@@ -43,6 +51,7 @@ Re-run both scans immediately before recording because GitHub competition counts
 - [ ] Register Agentic Wallet and A2MCP ASP through Onchain OS.
 - [ ] Add and activate the paid `Bounty Viability Audit` A2A service.
 - [ ] Confirm the ASP passes review and is live in the marketplace.
-- [ ] Record and publish the demo on X with `#OKXAI`.
+- [x] Generate the captioned demo video under 90 seconds.
+- [ ] Publish the demo on X with `#OKXAI`.
 - [ ] Insert ASP name, Agent ID, description, type, X handle, X post URL and Telegram in the official form.
 - [ ] Submit before 2026-07-17 23:59 UTC.
