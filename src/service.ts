@@ -73,14 +73,27 @@ async function evaluate(
   };
 }
 
+export function discoveryBudget(limit: number, authenticated: boolean): number {
+  if (!authenticated) return Math.min(2, Math.max(1, limit));
+  return Math.min(20, Math.max(1, limit * 3));
+}
+
 async function discoverCandidates(client: GitHubClient, limit: number): Promise<GitHubIssue[]> {
+  const budget = discoveryBudget(limit, client.authenticated);
   const searches = [
     client.searchIssues(
       'bounty in:title,body is:issue is:open -label:"good first issue"',
-      limit * 2,
+      budget,
     ),
-    client.searchIssues('repo:Expensify/App label:"Help Wanted" is:issue is:open', limit),
   ];
+  if (client.authenticated) {
+    searches.push(
+      client.searchIssues(
+        'repo:Expensify/App label:"Help Wanted" is:issue is:open',
+        Math.min(limit, budget),
+      ),
+    );
+  }
   const settled = await Promise.allSettled(searches);
   const deduped = new Map<string, GitHubIssue>();
 
@@ -89,7 +102,7 @@ async function discoverCandidates(client: GitHubClient, limit: number): Promise<
     for (const issue of result.value) deduped.set(issue.html_url, issue);
   }
 
-  return [...deduped.values()].slice(0, Math.min(20, limit * 3));
+  return [...deduped.values()].slice(0, budget);
 }
 
 export function validateRequest(value: unknown): ScanRequest {

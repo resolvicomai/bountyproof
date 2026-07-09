@@ -168,5 +168,6 @@ export interface ScanResponse {
   diagnostics: {
     candidatesExamined: number;
     githubRateLimitRemaining: string | null;
+    cacheState?: "fresh" | "miss" | "stale";
   };
 }

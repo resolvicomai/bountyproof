@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { lastPageFromLink, parseIssueUrl } from "../src/github.js";
+import { GitHubClient, lastPageFromLink, parseIssueUrl } from "../src/github.js";
 
 describe("parseIssueUrl", () => {
   it("parses a canonical GitHub issue URL", () => {
@@ -34,5 +34,12 @@ describe("lastPageFromLink", () => {
     expect(
       lastPageFromLink('<https://api.github.com/resource?page=1>; rel="prev"'),
     ).toBe(1);
+  });
+});
+
+describe("GitHubClient", () => {
+  it("reports whether requests use authenticated GitHub capacity", () => {
+    expect(new GitHubClient("").authenticated).toBe(false);
+    expect(new GitHubClient("token").authenticated).toBe(true);
   });
 });

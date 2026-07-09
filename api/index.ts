@@ -131,7 +131,7 @@ export const PAGE = String.raw`<!doctype html>
         const flags=document.querySelector('#flags');flags.replaceChildren(...item.flags.map(value=>{const el=document.createElement('span');el.className='flag';el.textContent=value;return el}));
         const rationale=document.querySelector('#rationale');rationale.replaceChildren(...item.rationale.map(value=>{const li=document.createElement('li');li.textContent=value;return li}));
         const issueLink=document.querySelector('#issue-link');issueLink.href=item.issue.url.startsWith('https://github.com/')?item.issue.url:'https://github.com/';
-        status.textContent='Evidence checked at '+new Date(payload.generatedAt).toLocaleString();result.hidden=false;
+        const cacheState=response.headers.get('X-BountyProof-Cache');status.textContent=(cacheState==='STALE'?'GitHub is temporarily limited. Showing cached evidence from ':'Evidence checked at ')+new Date(payload.generatedAt).toLocaleString();result.hidden=false;
       } catch(error) { status.textContent=error instanceof Error?error.message:'Verification failed'; }
       finally { submit.disabled=false; }
     });

@@ -35,6 +35,7 @@ export class GitHubApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly retryAfterSeconds: number | null = null,
   ) {
     super(message);
     this.name = "GitHubApiError";
@@ -65,7 +66,11 @@ export class GitHubClient {
   private remaining: string | null = null;
 
   constructor(token = process.env.GITHUB_TOKEN) {
-    this.token = token;
+    this.token = token || undefined;
+  }
+
+  get authenticated(): boolean {
+    return this.token !== undefined;
   }
 
   get rateLimitRemaining(): string | null {
@@ -88,9 +93,15 @@ export class GitHubClient {
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => ({}))) as { message?: string };
+      const resetAt = Number(response.headers.get("x-ratelimit-reset"));
+      const retryAfterSeconds =
+        this.remaining === "0" && Number.isFinite(resetAt)
+          ? Math.max(1, resetAt - Math.floor(Date.now() / 1000))
+          : null;
       throw new GitHubApiError(
         payload.message ?? `GitHub API returned HTTP ${response.status}`,
         response.status,
+        retryAfterSeconds,
       );
     }
     return {

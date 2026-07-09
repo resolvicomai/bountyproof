@@ -21,5 +21,8 @@
     "typescript": "^5.8.0",
     "vercel": "^55.0.0",
     "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "@vercel/functions": "^3.7.5"
   }
 }
