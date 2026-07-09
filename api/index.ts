@@ -61,6 +61,7 @@ export const PAGE = String.raw`<!doctype html>
     .audit-action { display:grid; justify-items:end; gap:7px; min-width:210px; }
     .audit-price { color:var(--gold); font:800 1.25rem ui-sans-serif,system-ui,sans-serif; }
     .audit-cta { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:9px; background:var(--gold); color:#171205; text-decoration:none; font-weight:900; text-align:center; }
+    .audit-secondary { color:var(--lime); font-size:.78rem; font-weight:800; }
     .audit-note { color:var(--muted); font-size:.7rem; text-align:right; }
     ul { color:var(--muted); padding-left:20px; }
     footer { display:flex; justify-content:space-between; gap:20px; margin-top:40px; color:var(--muted); font-size:.8rem; }
@@ -106,9 +107,10 @@ export const PAGE = String.raw`<!doctype html>
           <p class="delivery">Concise evidence report delivered within 4 hours.</p>
         </div>
         <div class="audit-action">
-          <div class="audit-price">10 USDT</div>
-          <a class="audit-cta" id="audit-link" href="mailto:eu@resolvicomai.app?subject=BountyProof%20paid%20audit%20request">Request paid audit</a>
-          <span class="audit-note">No payment details needed to request.</span>
+          <div class="audit-price">10 USDC escrow</div>
+          <a class="audit-cta" href="https://agentpact.xyz/offers/b556dd9c-3fdc-40d3-a642-1648bafc9a79" target="_blank" rel="noopener noreferrer">Buy with USDC escrow ↗</a>
+          <a class="audit-secondary" id="audit-link" href="mailto:eu@resolvicomai.app?subject=BountyProof%20paid%20audit%20request">Ask before paying</a>
+          <span class="audit-note">Escrow releases after delivery approval.</span>
         </div>
       </aside>
     </section>

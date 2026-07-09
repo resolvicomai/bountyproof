@@ -4,7 +4,7 @@ Find coding work that is actually worth doing.
 
 BountyProof is a deterministic opportunity-intelligence API for developers and agents. It verifies a GitHub issue, extracts payment evidence only from trusted sources, measures visible competition and linked solutions through the GitHub timeline, detects assignments plus stale or suspicious listings, and ranks the opportunity by expected value.
 
-The public product is live at [bountyproof.vercel.app](https://bountyproof.vercel.app). The deterministic scanner is free. A reviewed viability audit costs 10 USDT and adds a human-readable decision, cited evidence, scope risk, stack fit, active competitors, linked pull requests, and expected value, delivered within four hours.
+The public product is live at [bountyproof.vercel.app](https://bountyproof.vercel.app). The deterministic scanner is free. A reviewed viability audit costs 10 USDC through escrow and adds a human-readable decision, cited evidence, scope risk, stack fit, active competitors, linked pull requests, and expected value, delivered within four hours.
 
 `GET /api/scan` returns self-describing metadata, `GET /api/openapi` returns the OpenAPI 3.1 contract, and an empty `POST /api/scan` performs a minimal discovery so automated marketplace checks receive HTTP 200.
 
