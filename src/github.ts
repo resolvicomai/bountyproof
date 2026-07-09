@@ -11,6 +11,20 @@ interface SearchResponse {
   items: GitHubIssue[];
 }
 
+interface GitHubPage<T> {
+  data: T;
+  link: string | null;
+}
+
+export function lastPageFromLink(link: string | null): number {
+  if (!link) return 1;
+  const last = link
+    .split(",")
+    .find((part) => /rel="last"/.test(part));
+  const match = last?.match(/[?&]page=(\d+)[^>]*>/);
+  return match ? Math.max(1, Number(match[1])) : 1;
+}
+
 export interface IssueReference {
   owner: string;
   repo: string;
@@ -58,7 +72,7 @@ export class GitHubClient {
     return this.remaining;
   }
 
-  private async request<T>(path: string): Promise<T> {
+  private async requestPage<T>(path: string): Promise<GitHubPage<T>> {
     const headers: Record<string, string> = {
       Accept: "application/vnd.github+json",
       "User-Agent": "bountyproof/0.1",
@@ -79,7 +93,31 @@ export class GitHubClient {
         response.status,
       );
     }
-    return (await response.json()) as T;
+    return {
+      data: (await response.json()) as T,
+      link: response.headers.get("link"),
+    };
+  }
+
+  private async request<T>(path: string): Promise<T> {
+    return (await this.requestPage<T>(path)).data;
+  }
+
+  private async requestPages<T>(path: string): Promise<T[]> {
+    const first = await this.requestPage<T[]>(path);
+    const lastPage = lastPageFromLink(first.link);
+    if (lastPage === 1) return first.data;
+
+    const pages = Array.from(
+      { length: Math.min(lastPage, 4) - 1 },
+      (_, index) => index + 2,
+    );
+    if (lastPage > 4) pages.push(lastPage);
+    const separator = path.includes("?") ? "&" : "?";
+    const rest = await Promise.all(
+      pages.map((page) => this.request<T[]>(`${path}${separator}page=${page}`)),
+    );
+    return [first.data, ...rest].flat();
   }
 
   async getIssue(reference: IssueReference): Promise<GitHubIssue> {
@@ -89,13 +127,13 @@ export class GitHubClient {
   }
 
   async getComments(reference: IssueReference): Promise<GitHubComment[]> {
-    return this.request<GitHubComment[]>(
+    return this.requestPages<GitHubComment>(
       `/repos/${encodeURIComponent(reference.owner)}/${encodeURIComponent(reference.repo)}/issues/${reference.number}/comments?per_page=100&sort=created&direction=asc`,
     );
   }
 
   async getTimeline(reference: IssueReference): Promise<GitHubTimelineEvent[]> {
-    return this.request<GitHubTimelineEvent[]>(
+    return this.requestPages<GitHubTimelineEvent>(
       `/repos/${encodeURIComponent(reference.owner)}/${encodeURIComponent(reference.repo)}/issues/${reference.number}/timeline?per_page=100`,
     );
   }

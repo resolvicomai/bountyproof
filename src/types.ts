@@ -50,6 +50,7 @@ export interface GitHubComment {
 export interface GitHubTimelineEvent {
   event: string;
   actor: GitHubUser | null;
+  created_at?: string;
   source?: {
     issue?: {
       html_url: string;
@@ -115,6 +116,7 @@ export type RiskFlag =
   | "new-low-trust-repository"
   | "existing-solution"
   | "exclusive-assignee"
+  | "large-scope"
   | "payment-not-escrowed";
 
 export interface OpportunityScore {

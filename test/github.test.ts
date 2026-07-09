@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseIssueUrl } from "../src/github.js";
+import { lastPageFromLink, parseIssueUrl } from "../src/github.js";
 
 describe("parseIssueUrl", () => {
   it("parses a canonical GitHub issue URL", () => {
@@ -17,5 +17,22 @@ describe("parseIssueUrl", () => {
     "https://github.com/owner/repo/issues/nope",
   ])("rejects invalid URLs: %s", (value) => {
     expect(() => parseIssueUrl(value)).toThrow();
+  });
+});
+
+describe("lastPageFromLink", () => {
+  it("extracts the final GitHub pagination page", () => {
+    expect(
+      lastPageFromLink(
+        '<https://api.github.com/resource?page=2>; rel="next", <https://api.github.com/resource?page=7>; rel="last"',
+      ),
+    ).toBe(7);
+  });
+
+  it("uses one page when GitHub omits a last link", () => {
+    expect(lastPageFromLink(null)).toBe(1);
+    expect(
+      lastPageFromLink('<https://api.github.com/resource?page=1>; rel="prev"'),
+    ).toBe(1);
   });
 });

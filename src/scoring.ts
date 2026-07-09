@@ -28,6 +28,9 @@ export interface ScoringOutput {
 }
 
 const DAY = 86_400_000;
+const TRUSTED_ASSOCIATIONS = ["OWNER", "MEMBER", "COLLABORATOR"];
+const WORK_INTENT =
+  /\/attempt|\/try\b|\/claim\b|\b(?:PR|pull request)\s*#?\d+|\bproposal\b|\b(?:can|could)\s+i\s+(?:take|work on)|\b(?:please\s+)?(?:assign|reassign)\b.{0,80}\b(?:me|to me)\b|\bi(?:'d| would)\s+(?:also\s+)?(?:like|love|be happy)\s+to\s+(?:work on|take)|\bi(?:'m| am)\s+(?:still\s+)?(?:interested|available|working on|taking)|\b(?:taking|claiming)\s+(?:this|the\s+)?(?:bounty|issue)\b|\bconsider\s+assigning\b.{0,60}\b(?:me|to me)\b/i;
 
 function ageInDays(older: string, now: Date): number {
   return Math.max(0, (now.getTime() - Date.parse(older)) / DAY);
@@ -40,6 +43,29 @@ function scorePayment(reward: RewardEvidence): number {
   if (reward.confidence >= 0.6) return 16;
   if (reward.confidence >= 0.35) return 10;
   return 4;
+}
+
+function hasLargeScope(issue: GitHubIssue): boolean {
+  const text = `${issue.title}\n${issue.body ?? ""}`;
+  const stages = new Set(
+    [...text.matchAll(/\bstage\s+(\d+)\b/gi)].map((match) => match[1]),
+  ).size;
+  const deliverySignals = [
+    /\bhardware\b/i,
+    /\bbenchmarks?\b|\bperformance\b/i,
+    /\bfull (?:generation )?pipeline\b/i,
+    /\bstreaming\b/i,
+    /\baccuracy\b|\bsimilarity\b|\bWER\b/i,
+    /\boptimization\b|\bprofiling\b/i,
+  ].filter((pattern) => pattern.test(text)).length;
+  return stages >= 3 || (text.length >= 6_000 && deliverySignals >= 4);
+}
+
+function isCompetitorComment(comment: GitHubComment): boolean {
+  return (
+    !TRUSTED_ASSOCIATIONS.includes(comment.author_association) &&
+    WORK_INTENT.test(comment.body)
+  );
 }
 
 function scoreExecutability(issue: GitHubIssue): number {
@@ -63,7 +89,8 @@ function scoreExecutability(issue: GitHubIssue): number {
     ? 3
     : 0;
   const completion = /merge|merged|payment|paid|award|payout|receive/i.test(text) ? 3 : 0;
-  return criteria + scope + claimProcess + completion;
+  const base = criteria + scope + claimProcess + completion;
+  return hasLargeScope(issue) ? Math.max(0, base - 8) : base;
 }
 
 function scoreLegitimacy(repository: GitHubRepository, now: Date): number {
@@ -102,18 +129,38 @@ function scoreCompetition(competition: CompetitionEvidence): number {
   return 0;
 }
 
-function scoreFreshness(
+function latestMaintainerActivity(
   issue: GitHubIssue,
   comments: GitHubComment[],
-  now: Date,
+  timeline: GitHubTimelineEvent[],
 ): number {
   const maintainerActivity = comments
     .filter((comment) =>
-      ["OWNER", "MEMBER", "COLLABORATOR"].includes(comment.author_association),
+      TRUSTED_ASSOCIATIONS.includes(comment.author_association),
     )
     .map((comment) => Date.parse(comment.created_at));
-  const latest = Math.max(Date.parse(issue.created_at), ...maintainerActivity);
-  const days = Math.max(0, (now.getTime() - latest) / DAY);
+  const trustedTimelineActivity = timeline
+    .filter((event) => ["assigned", "unassigned", "reopened"].includes(event.event))
+    .map((event) => event.created_at)
+    .filter((createdAt): createdAt is string => createdAt !== undefined)
+    .map((createdAt) => Date.parse(createdAt));
+  return Math.max(
+    Date.parse(issue.created_at),
+    ...maintainerActivity,
+    ...trustedTimelineActivity,
+  );
+}
+
+function scoreFreshness(
+  issue: GitHubIssue,
+  comments: GitHubComment[],
+  timeline: GitHubTimelineEvent[],
+  now: Date,
+): number {
+  const days = Math.max(
+    0,
+    (now.getTime() - latestMaintainerActivity(issue, comments, timeline)) / DAY,
+  );
 
   if (days <= 1) return 10;
   if (days <= 3) return 8;
@@ -188,11 +235,7 @@ export function scoreOpportunity(input: ScoringInput): ScoringOutput {
   if (competition.uniqueCompetitors >= 10) flags.push("extreme-competition");
   const activeCompetitors = new Set([
     ...comments
-      .filter((comment) =>
-        /\/attempt|\/try\b|\/claim\b|\b(?:PR|pull request)\s*#?\d+|\bproposal\b|i(?:'d| would) like to work|claiming this/i.test(
-          comment.body,
-        ),
-      )
+      .filter(isCompetitorComment)
       .map((comment) => comment.user.login),
     ...timeline
       .map((event) => event.source?.issue)
@@ -204,7 +247,7 @@ export function scoreOpportunity(input: ScoringInput): ScoringOutput {
     issue.assignees.some((assignee) => activeCompetitors.has(assignee.login)) ||
     comments.some(
       (comment) =>
-        ["OWNER", "MEMBER", "COLLABORATOR"].includes(comment.author_association) &&
+        TRUSTED_ASSOCIATIONS.includes(comment.author_association) &&
         /\bit(?:'s| is) yours\b|\breserved for\b|\bassigned (?:this )?(?:issue )?to @/i.test(
           comment.body,
         ),
@@ -212,7 +255,12 @@ export function scoreOpportunity(input: ScoringInput): ScoringOutput {
   ) {
     flags.push("exclusive-assignee");
   }
-  if (ageInDays(issue.created_at, now) > 90) flags.push("stale");
+  if (hasLargeScope(issue)) flags.push("large-scope");
+  if (
+    (now.getTime() - latestMaintainerActivity(issue, comments, timeline)) / DAY > 90
+  ) {
+    flags.push("stale");
+  }
   if (
     ageInDays(repository.created_at, now) < 30 &&
     repository.stargazers_count < 10 &&
@@ -226,7 +274,7 @@ export function scoreOpportunity(input: ScoringInput): ScoringOutput {
   const legitimacy = scoreLegitimacy(repository, now);
   const value = scoreValue(reward.amountUsd);
   const competitionScore = scoreCompetition(competition);
-  const freshness = scoreFreshness(issue, comments, now);
+  const freshness = scoreFreshness(issue, comments, timeline, now);
   const fit = scoreFit(repository, issue, preferredLanguages);
   const raw =
     payment + executability + legitimacy + value + competitionScore + freshness + fit;
@@ -238,6 +286,7 @@ export function scoreOpportunity(input: ScoringInput): ScoringOutput {
   if (competition.uniqueCompetitors >= 5) total = Math.min(total, 60);
   if (flags.includes("extreme-competition")) total = Math.min(total, 45);
   if (flags.includes("existing-solution")) total = Math.min(total, 50);
+  if (flags.includes("large-scope")) total = Math.min(total, 54);
   if (
     flags.some((flag) =>
       [
@@ -322,11 +371,7 @@ export function extractCompetition(
       .filter((pullRequest) => pullRequest.state === "open")
       .map((pullRequest) => pullRequest.html_url),
   ]);
-  const competitorComments = comments.filter((comment) =>
-    /\/attempt|\/try\b|\/claim\b|\b(?:PR|pull request)\s*#?\d+|\bproposal\b|i(?:'d| would) like to work|claiming this/i.test(
-      comment.body,
-    ),
-  );
+  const competitorComments = comments.filter(isCompetitorComment);
   const competitorUsers = [
     ...competitorComments.map((comment) => comment.user),
     ...timelinePullRequests

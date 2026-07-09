@@ -97,12 +97,67 @@ describe("scoreOpportunity", () => {
     expect(result.flags).toContain("stale");
   });
 
+  it("does not mark an old issue stale after recent maintainer activity", () => {
+    const result = score({
+      issue: issue({
+        created_at: "2025-11-01T00:00:00.000Z",
+        updated_at: "2026-07-08T00:00:00.000Z",
+      }),
+      comments: [
+        comment({
+          author_association: "MEMBER",
+          created_at: "2026-07-08T00:00:00.000Z",
+          body: "We will reassign this bounty at the end of the week.",
+        }),
+      ],
+    });
+
+    expect(result.flags).not.toContain("stale");
+    expect(result.score.freshness).toBeGreaterThan(0);
+  });
+
+  it("treats a recent reassignment event as fresh maintainer activity", () => {
+    const result = score({
+      issue: issue({
+        created_at: "2025-11-01T00:00:00.000Z",
+        updated_at: "2026-07-08T00:00:00.000Z",
+      }),
+      comments: [],
+      timeline: [
+        {
+          event: "unassigned",
+          actor: { login: "maintainer", type: "User" },
+          created_at: "2026-07-08T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(result.flags).not.toContain("stale");
+    expect(result.score.freshness).toBeGreaterThan(0);
+  });
+
   it("caps an opportunity that already has a linked solution", () => {
     const result = score({
       competition: { ...noCompetition, linkedPullRequests: 1 },
     });
     expect(result.score.total).toBeLessThanOrEqual(50);
     expect(result.flags).toContain("existing-solution");
+  });
+
+  it("skips a multi-stage hardware and performance project", () => {
+    const result = score({
+      issue: issue({
+        body: [
+          "Stage 1 — implement the full generation pipeline on custom hardware.",
+          "Stage 2 — add streaming, profiling, and performance benchmarks.",
+          "Stage 3 — optimize accuracy, similarity, and WER.",
+        ].join("\n"),
+      }),
+    });
+
+    expect(result.flags).toContain("large-scope");
+    expect(result.score.total).toBeLessThanOrEqual(54);
+    expect(result.recommendation).toBe("skip");
   });
 
   it("rejects work explicitly reserved for another contributor", () => {
@@ -145,14 +200,48 @@ describe("scoreOpportunity", () => {
 });
 
 describe("extractCompetition", () => {
+  it("recognizes common assignment and interest phrases", () => {
+    const competition = extractCompetition(
+      [
+        comment({
+          body: "Can you assign this issue to me?",
+          user: { login: "alice", type: "User" },
+          author_association: "NONE",
+        }),
+        comment({
+          body: "I'd be happy to take it on.",
+          user: { login: "bob", type: "User" },
+          author_association: "CONTRIBUTOR",
+        }),
+        comment({
+          body: "I will reassign this bounty on Friday.",
+          user: { login: "maintainer", type: "User" },
+          author_association: "MEMBER",
+        }),
+      ],
+      [],
+    );
+
+    expect(competition.uniqueCompetitors).toBe(2);
+  });
+
   it("deduplicates competitors and linked pull requests", () => {
     const comments = [
-      comment({ body: "/attempt #42", user: { login: "alice", type: "User" } }),
+      comment({
+        body: "/attempt #42",
+        user: { login: "alice", type: "User" },
+        author_association: "NONE",
+      }),
       comment({
         body: "PR https://github.com/example/paid-project/pull/7 /claim #42",
         user: { login: "alice", type: "User" },
+        author_association: "NONE",
       }),
-      comment({ body: "I'd like to work on this", user: { login: "bob", type: "User" } }),
+      comment({
+        body: "I'd like to work on this",
+        user: { login: "bob", type: "User" },
+        author_association: "NONE",
+      }),
       comment({ body: "/attempt #42", user: { login: "algora-pbc", type: "Bot" } }),
     ];
 
