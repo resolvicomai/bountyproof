@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { validateRequest } from "../src/service.js";
 
 describe("validateRequest", () => {
+  it("turns an empty JSON body into a marketplace-safe discovery", () => {
+    expect(validateRequest({})).toEqual({ action: "discover", limit: 1 });
+  });
+
   it("accepts a verify request", () => {
     expect(
       validateRequest({

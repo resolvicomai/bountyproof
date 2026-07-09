@@ -8,7 +8,6 @@ import type {
   ScanResponse,
 } from "./types.js";
 
-const DEFAULT_LANGUAGES = ["TypeScript", "JavaScript", "Python", "MCP", "Node"];
 const MAX_RESULTS = 10;
 
 function clampLimit(value: number | undefined): number {
@@ -95,6 +94,9 @@ export function validateRequest(value: unknown): ScanRequest {
     throw new Error("Request body must be a JSON object");
   }
   const body = value as Record<string, unknown>;
+  if (Object.keys(body).length === 0) {
+    return { action: "discover", limit: 1 };
+  }
   if (body.action !== "verify" && body.action !== "discover") {
     throw new Error('action must be either "verify" or "discover"');
   }
@@ -131,7 +133,7 @@ export async function scan(
   const now = dependencies.now ?? new Date();
   const preferredLanguages = request.languages?.length
     ? request.languages.slice(0, 10)
-    : DEFAULT_LANGUAGES;
+    : [];
   const limit = clampLimit(request.limit);
   let candidates: GitHubIssue[];
 

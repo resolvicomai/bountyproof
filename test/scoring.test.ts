@@ -47,6 +47,12 @@ describe("scoreOpportunity", () => {
     expect(result.score.total).toBe(96);
   });
 
+  it("uses a neutral fit when the caller does not provide a stack", () => {
+    const result = score({ preferredLanguages: [] });
+    expect(result.score.fit).toBe(2);
+    expect(result.score.total).toBe(91);
+  });
+
   it("makes a closed issue ineligible", () => {
     const result = score({ issue: issue({ state: "closed" }) });
     expect(result.score.total).toBe(0);

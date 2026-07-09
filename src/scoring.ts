@@ -129,6 +129,7 @@ function scoreFit(
 ): number {
   const text = `${repository.language ?? ""} ${repository.description ?? ""} ${issue.title} ${issue.body ?? ""}`.toLowerCase();
   const preferred = preferredLanguages.map((language) => language.toLowerCase());
+  if (preferred.length === 0) return 2;
   const hasPreferred = preferred.some((language) => text.includes(language));
   const isMcp = /\bmcp\b|model context protocol/.test(text);
   const isApi = /\bapi\b|integration|backend|server/.test(text);

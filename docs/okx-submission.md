@@ -6,8 +6,8 @@
 - Type: `A2MCP`
 - Price per call: `0` during launch and review
 - Category: `Software Services`
-- Endpoint: `https://PERMANENT_DOMAIN/api/scan`
-- OpenAPI: `https://PERMANENT_DOMAIN/api/openapi`
+- Endpoint: `https://bountyproof.vercel.app/api/scan`
+- OpenAPI: `https://bountyproof.vercel.app/api/openapi`
 - Description: `Verifies and ranks paid GitHub coding opportunities using payment evidence, visible competition, repository legitimacy, freshness, stack fit, and expected value.`
 
 The endpoint returns HTTP 200 for an empty POST and performs a one-result discovery. Structured callers can use `verify` or `discover` as documented in the repository README.
@@ -26,7 +26,7 @@ The endpoint returns HTTP 200 for an empty POST and performs a one-result discov
 
 ## Final submission checklist
 
-- [ ] Replace permanent endpoint placeholders.
+- [x] Deploy and verify the permanent endpoint.
 - [ ] Register Agentic Wallet and A2MCP ASP through Onchain OS.
 - [ ] Confirm the ASP passes review and is live in the marketplace.
 - [ ] Record and publish the demo on X with `#OKXAI`.
