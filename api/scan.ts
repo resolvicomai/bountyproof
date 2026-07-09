@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 import { GitHubApiError } from "../src/github.js";
+import { serviceMetadata } from "../src/metadata.js";
 import { scan, validateRequest } from "../src/service.js";
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
@@ -10,13 +11,18 @@ export default async function handler(request: VercelRequest, response: VercelRe
   response.setHeader("Cache-Control", "no-store");
 
   if (request.method === "OPTIONS") return response.status(204).end();
+  if (request.method === "GET") return response.status(200).json(serviceMetadata);
   if (request.method !== "POST") {
-    response.setHeader("Allow", "POST, OPTIONS");
+    response.setHeader("Allow", "GET, POST, OPTIONS");
     return response.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const body = validateRequest(request.body);
+    const body = validateRequest(
+      request.body === undefined || request.body === null
+        ? { action: "discover", limit: 1 }
+        : request.body,
+    );
     const result = await scan(body);
     return response.status(200).json(result);
   } catch (error) {

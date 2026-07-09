@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 import { GitHubApiError } from "../src/github.js";
+import { openApiDocument, serviceMetadata } from "../src/metadata.js";
 import { scan, validateRequest } from "../src/service.js";
 
 const port = Number(process.env.PORT ?? 3000);
@@ -28,7 +29,7 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
     chunks.push(buffer);
   }
   const raw = Buffer.concat(chunks).toString("utf8");
-  if (!raw) throw new Error("Request body is required");
+  if (!raw) return undefined;
   return JSON.parse(raw) as unknown;
 }
 
@@ -41,12 +42,21 @@ const server = createServer(async (request, response) => {
       version: "0.1.0",
     });
   }
+  if (request.method === "GET" && request.url === "/api/scan") {
+    return send(response, 200, serviceMetadata);
+  }
+  if (request.method === "GET" && request.url === "/api/openapi") {
+    return send(response, 200, openApiDocument);
+  }
   if (request.method !== "POST" || request.url !== "/api/scan") {
     return send(response, 404, { error: "Not found" });
   }
 
   try {
-    const body = validateRequest(await readJson(request));
+    const rawBody = await readJson(request);
+    const body = validateRequest(
+      rawBody === undefined ? { action: "discover", limit: 1 } : rawBody,
+    );
     return send(response, 200, await scan(body));
   } catch (error) {
     if (error instanceof GitHubApiError) {

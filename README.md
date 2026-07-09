@@ -6,6 +6,8 @@ BountyProof is a deterministic opportunity-intelligence API for developers and a
 
 The first public version is a free A2MCP-compatible HTTPS endpoint built for the OKX.AI Genesis hackathon. A paid x402 endpoint is planned after the free review path is live.
 
+`GET /api/scan` returns self-describing metadata, `GET /api/openapi` returns the OpenAPI 3.1 contract, and an empty `POST /api/scan` performs a minimal discovery so automated marketplace checks receive HTTP 200.
+
 ## API
 
 ### Verify one issue

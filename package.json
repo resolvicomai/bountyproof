@@ -19,7 +19,7 @@
     "@types/node": "^24.0.0",
     "@vercel/node": "^5.3.0",
     "typescript": "^5.8.0",
-    "vercel": "^44.0.0",
+    "vercel": "^55.0.0",
     "vitest": "^3.2.0"
   }
 }
