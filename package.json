@@ -1,0 +1,25 @@
+{
+  "name": "bountyproof",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Verify and rank paid coding opportunities before spending engineering time.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:live": "vite-node scripts/verify-live.ts",
+    "serve:local": "vite-node scripts/server.ts",
+    "dev": "vercel dev"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@vercel/node": "^5.3.0",
+    "typescript": "^5.8.0",
+    "vercel": "^44.0.0",
+    "vitest": "^3.2.0"
+  }
+}
